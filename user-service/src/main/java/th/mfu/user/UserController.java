@@ -54,11 +54,9 @@ public class UserController {
     // ---- POST (register / create an account) ----------------------------
     @PostMapping("/register")
     public ResponseEntity<String> createUser(@RequestBody User user) {
-        // A normal sign-up defaults to USER, so nobody can make themselves an
-        // admin just by sending role=ADMIN in the body.
-        if (user.getRole() == null || user.getRole().isBlank()) {
-            user.setRole(User.ROLE_USER);
-        }
+        // Self sign-up is always a USER. We OVERWRITE whatever role was sent, so
+        // nobody can make themselves an admin by putting role=ADMIN in the body.
+        user.setRole(User.ROLE_USER);
         User saved = userRepository.save(user);
         return new ResponseEntity<>("User created with ID: " + saved.getId(), HttpStatus.CREATED);
     }
