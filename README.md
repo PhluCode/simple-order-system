@@ -61,6 +61,7 @@ to complete. Every graded feature has an owner.
 | 3 | `Order` | order-service | one Order has many OrderItems (`@OneToMany`) |
 | 4 | `OrderItem` | order-service | many OrderItems belong to one Order (`@ManyToOne`) |
 | 5 | `Notification` | notification-service | filled from `orders` Kafka events |
+| 6 | `User` *(bonus)* | user-service | account with a `role`: ADMIN or USER |
 
 ```
 Category 1 ───< Product          OrderItem >─── 1 Order
@@ -79,8 +80,28 @@ Order (orders topic) ──▶ Kafka ──▶ Notification (notification-servic
 | **B** | order-service | `Order`, `OrderItem`, `OrderController` (Feign call + Kafka publish) | **Feign + Eureka (5)**, Kafka producer, JPA (4) |
 | **C** | notification-service | `Notification`, the `@KafkaListener` in `OrderPlacedListener` | **Kafka pub/sub (5)**, JPA (2) |
 
-> Every `TODO` in the code is tagged `[REST]`, `[JPA]`, `[Feign]` or `[Kafka]`
-> so you can see which points it earns.
+> Every `TODO` in the code is tagged `[REST]`, `[JPA]`, `[Feign]`, `[Kafka]`
+> or `[Auth]` so you can see which points it earns.
+
+### Optional: user-service (accounts + roles)
+
+Not required by the rubric — the required 5 entities are already covered — but
+it makes the system realistic. It adds a **6th entity** (`User`) with a `role`
+of `ADMIN` or `USER`, and a **simple** log-in (`POST /users/login` checks the
+username + password against the database and returns the role; no Spring
+Security, no JWT). The idea:
+
+- **USER** places orders (order-service).
+- **ADMIN** watches the notifications dashboard (:8300).
+
+Enforcing "only admin sees notifications" is left as a later step (a note, not
+code, so notification-service stays untouched for now). Since there are 3 of you
+and now 4 services, let one member own two, or treat user-service as a shared
+bonus. Port **8400**.
+
+> ⚠️ The demo stores passwords as plain text for simplicity. Say so in the
+> Q&A — a real app must hash them (e.g. BCrypt) and never return them in a
+> response.
 
 ---
 

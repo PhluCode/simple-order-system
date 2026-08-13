@@ -7,8 +7,8 @@ COPY product-service/pom.xml product-service/
 COPY order-service/pom.xml order-service/
 COPY notification-service/pom.xml notification-service/
 COPY user-service/pom.xml user-service/
-COPY product-service/src product-service/src
-RUN mvn -q -B -DskipTests -pl product-service -am package
+COPY user-service/src user-service/src
+RUN mvn -q -B -DskipTests -pl user-service -am package
 
 FROM eclipse-temurin:11-jre
 WORKDIR /app
@@ -16,6 +16,6 @@ ENV JAVA_OPTS=""
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
-COPY --from=build /app/product-service/target/*.jar /app/app.jar
-EXPOSE 8100
+COPY --from=build /app/user-service/target/*.jar /app/app.jar
+EXPOSE 8400
 ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar /app/app.jar"]

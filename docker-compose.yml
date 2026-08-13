@@ -17,6 +17,7 @@ version: '3.8'
 #   8101  product-service copy 2  (this is how you SEE the load balancer)
 #   8200  order-service
 #   8300  notification-service    http://localhost:8300  (live page)
+#   8400  user-service            (accounts + simple login)
 # ---------------------------------------------------------------------------
 
 services:
@@ -136,6 +137,28 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8200/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    container_name: user-service
+    environment:
+      - SERVER_PORT=8400
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-naming-server:8761/eureka/
+    ports:
+      - "8400:8400"
+    networks:
+      - order-net
+    depends_on:
+      eureka-naming-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8400/actuator/health || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 10

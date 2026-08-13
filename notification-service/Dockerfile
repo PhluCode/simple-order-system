@@ -6,6 +6,7 @@ COPY eureka-naming-server/pom.xml eureka-naming-server/
 COPY product-service/pom.xml product-service/
 COPY order-service/pom.xml order-service/
 COPY notification-service/pom.xml notification-service/
+COPY user-service/pom.xml user-service/
 COPY notification-service/src notification-service/src
 RUN mvn -q -B -DskipTests -pl notification-service -am package
 
