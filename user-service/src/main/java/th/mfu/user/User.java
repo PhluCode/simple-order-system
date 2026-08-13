@@ -8,8 +8,8 @@ import javax.persistence.Table;
 
 /**
  * User = one account. Its {@code role} decides what it may do:
- *   ADMIN - opens the notifications dashboard (:8300).
- *   USER  - places orders.
+ * ADMIN - opens the notifications dashboard (:8300).
+ * USER - places orders.
  * <p>
  * ENTITY 6 (bonus - the required 5 are already covered). Note
  * {@code @Table(name = "users")}: USER is a reserved word in some databases,
@@ -27,15 +27,10 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // TODO [JPA]: add the fields of an account and their getters/setters:
-    //   - String username     (unique in practice)
-    //   - String password     (see the warning below)
-    //   - String role         (use ROLE_ADMIN / ROLE_USER)
-    //   - String displayName
-    //
-    // SECURITY NOTE: storing a password as plain text is fine ONLY for this
-    // classroom demo. A real app must HASH it (e.g. BCrypt) and never return it
-    // in a REST response. Leave a comment saying so - your demo Q&A may ask.
+    String username;
+    String password;
+    String role;
+    String displayName;
 
     public Long getId() {
         return id;
@@ -44,4 +39,37 @@ public class User {
     public void setId(Long id) {
         this.id = id;
     }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
+
 }

@@ -1,5 +1,10 @@
 package th.mfu.user;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,9 +17,9 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Accounts + log-in.
  * <p>
- * Log-in here is deliberately simple: no Spring Security, no JWT. POST /login
- * looks the username up, compares the password, and returns the account (with
- * its role) or 401. That is enough to demo "admin vs user"; harden it later.
+ * Log-in here is deliberately simple: no Spring Security, no JWT. POST
+ * /users/login looks the username up, compares the password, and returns the
+ * account (with its role) or 401. Enough to demo "admin vs user"; harden later.
  */
 @RestController
 @RequestMapping("/users")
@@ -23,35 +28,54 @@ public class UserController {
     @Autowired
     private UserRepository userRepository;
 
-    // ---- GET (list) : worked example ------------------------------------
-    // NOTE: this currently returns passwords too. Before the demo, hide the
-    // password (e.g. set it to null on each user, or return a DTO without it).
+    /**
+     * A password must NEVER leave the service in a response. This turns a User
+     * into a plain map without the password field, used by every read below.
+     */
+    private Map<String, Object> toSafe(User u) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", u.getId());
+        m.put("username", u.getUsername());
+        m.put("role", u.getRole());
+        m.put("displayName", u.getDisplayName());
+        return m;
+    }
+
+    // ---- GET (list) ------------------------------------------------------
     @GetMapping
-    public ResponseEntity<Iterable<User>> listUsers() {
-        return new ResponseEntity<>(userRepository.findAll(), HttpStatus.OK);
+    public ResponseEntity<List<Map<String, Object>>> listUsers() {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (User u : userRepository.findAll()) {
+            out.add(toSafe(u));
+        }
+        return new ResponseEntity<>(out, HttpStatus.OK);
     }
 
     // ---- POST (register / create an account) ----------------------------
-    @PostMapping
+    @PostMapping("/register")
     public ResponseEntity<String> createUser(@RequestBody User user) {
-        // TODO [REST]: save the account and return 201 CREATED.
-        //   (Set a default role of ROLE_USER if none was sent, so a normal
-        //    sign-up cannot make itself an admin.)
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+        // A normal sign-up defaults to USER, so nobody can make themselves an
+        // admin just by sending role=ADMIN in the body.
+        if (user.getRole() == null || user.getRole().isBlank()) {
+            user.setRole(User.ROLE_USER);
+        }
+        User saved = userRepository.save(user);
+        return new ResponseEntity<>("User created with ID: " + saved.getId(), HttpStatus.CREATED);
     }
 
     // ---- POST /users/login : the simple log-in --------------------------
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody User credentials) {
-        // TODO [Auth]:
-        //   1. User found = userRepository.findByUsername(credentials.getUsername());
-        //   2. if found == null OR password does not match -> 401 UNAUTHORIZED
-        //   3. otherwise return the account (hide the password first!) with 200.
-        //      The caller reads found.getRole() to decide ADMIN vs USER.
-        //
-        //   Later, order-service could Feign-call this before accepting an order,
-        //   and the notifications page could allow only ROLE_ADMIN. Not required
-        //   for the demo - a note in the README is enough for now.
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+        User found = userRepository.findByUsername(credentials.getUsername());
+
+        // Wrong username, or wrong password -> 401. (Same message for both, so
+        // an attacker cannot tell which one was wrong.)
+        if (found == null || !found.getPassword().equals(credentials.getPassword())) {
+            return new ResponseEntity<>("Invalid username or password", HttpStatus.UNAUTHORIZED);
+        }
+
+        // Success: return the account WITHOUT the password. The caller reads
+        // "role" to decide ADMIN vs USER.
+        return new ResponseEntity<>(toSafe(found), HttpStatus.OK);
     }
 }

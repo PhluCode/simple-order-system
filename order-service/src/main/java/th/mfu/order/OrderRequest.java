@@ -8,6 +8,7 @@ package th.mfu.order;
 public class OrderRequest {
 
     private String customerName;
+    private Long userId;      // which user placed it (from user-service)
     private Long productId;
     private int quantity;
 
@@ -17,6 +18,14 @@ public class OrderRequest {
 
     public void setCustomerName(String customerName) {
         this.customerName = customerName;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public Long getProductId() {

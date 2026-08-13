@@ -29,6 +29,9 @@ public class Order {
 
     // TODO [JPA]: add the fields of an order and their getters/setters:
     //   - String customerName
+    //   - Long userId          (WHICH user placed it - this is how "a user's
+    //                           orders" is stored: on the order, not on User.
+    //                           Fetch them later with GET /orders/user/{userId}.)
     //   - double totalPrice
     //   - @OneToMany(cascade = CascadeType.ALL) List<OrderItem> items
     //     (cascade = ALL so saving the order also saves its items)
