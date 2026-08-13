@@ -27,10 +27,10 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    String username;
-    String password;
-    String role;
-    String displayName;
+    private String username;
+    private String password;
+    private String role;
+    private String displayName;
 
     public Long getId() {
         return id;
