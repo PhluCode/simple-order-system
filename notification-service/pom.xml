@@ -13,14 +13,6 @@
     <artifactId>notification-service</artifactId>
     <packaging>jar</packaging>
 
-    <!--
-        STUDENT C owns this module. It SUBSCRIBES to the "orders" topic and
-        writes a notification for each order (JPA). It calls nobody - it only
-        knows the topic. A tiny web page at http://localhost:8300 shows the
-        notifications live. Given: pom, app class, properties, Dockerfile, the
-        REST read endpoint and the live page. Your job: the entity and the
-        Kafka listener.
-    -->
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
