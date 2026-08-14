@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,6 +19,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import feign.FeignException;
 
 /**
  * The heart of the project. STUDENT B.
@@ -58,6 +61,14 @@ public class OrderController {
         return new ResponseEntity<>(orderRepository.findAll(), HttpStatus.OK);
     }
 
+    // ---- GET (one order by ID) -------------------------------------------
+    @GetMapping("/{id}")
+    public ResponseEntity<Order> getOrderById(@PathVariable Long id) {
+        return orderRepository.findById(id)
+                .map(order -> new ResponseEntity<>(order, HttpStatus.OK))
+                .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+    }
+
     // ---- GET (one user's orders) -----------------------------------------
     // This is "the orders of each person". They live HERE, on order-service,
     // keyed by userId - NOT inside user-service.
@@ -66,16 +77,45 @@ public class OrderController {
         return new ResponseEntity<>(orderRepository.findByUserId(userId), HttpStatus.OK);
     }
 
+    // ---- DELETE (cancel / delete order) ----------------------------------
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
+        if (orderRepository.existsById(id)) {
+            orderRepository.deleteById(id);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+
     // ---- POST (place an order) : the main task ---------------------------
-    // Example request body (design your own shape - this is only a suggestion):
-    //   { "customerName": "Alice", "productId": 1, "quantity": 2 }
+    // Example request body:
+    //   { "customerName": "Alice", "userId": 1, "productId": 1, "quantity": 2 }
     @PostMapping
     public ResponseEntity<String> placeOrder(@RequestBody OrderRequest request) {
+        if (request == null || request.getProductId() == null) {
+            return new ResponseEntity<>("Product ID is required", HttpStatus.BAD_REQUEST);
+        }
+
+        int quantity = request.getQuantity() > 0 ? request.getQuantity() : 1;
+
         // ---- step 1 [Feign]: ask product-service for the product -----------
         // Calling this method makes a real HTTP GET under the hood, resolved
         // through Eureka by the name "product-service" and load-balanced
         // between the two running copies.
-        ProductDTO product = productClient.getProduct(request.getProductId());
+        ProductDTO product;
+        try {
+            product = productClient.getProduct(request.getProductId());
+        } catch (FeignException.NotFound e) {
+            return new ResponseEntity<>("Product not found with ID: " + request.getProductId(), HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            LOGGER.error("failed to fetch product from product-service", e);
+            return new ResponseEntity<>("Failed to communicate with product-service", HttpStatus.SERVICE_UNAVAILABLE);
+        }
+
+        if (product == null) {
+            return new ResponseEntity<>("Product not found with ID: " + request.getProductId(), HttpStatus.NOT_FOUND);
+        }
+
         LOGGER.info("product came from copy on port {}", product.getServedByPort());
 
         // ---- step 2 [JPA]: build and save the Order + OrderItem ------------
@@ -83,9 +123,9 @@ public class OrderController {
         item.setProductId(product.getId());
         item.setProductName(product.getName());
         item.setPrice(product.getPrice());
-        item.setQuantity(request.getQuantity());
+        item.setQuantity(quantity);
 
-        double totalPrice = product.getPrice() * request.getQuantity();
+        double totalPrice = product.getPrice() * quantity;
 
         Order order = new Order();
         order.setCustomerName(request.getCustomerName());
@@ -104,7 +144,7 @@ public class OrderController {
         event.put("orderId", saved.getId());
         event.put("customerName", saved.getCustomerName());
         event.put("productName", product.getName());
-        event.put("quantity", request.getQuantity());
+        event.put("quantity", quantity);
 
         String json;
         try {
