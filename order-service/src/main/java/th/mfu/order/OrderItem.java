@@ -22,11 +22,13 @@ public class OrderItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // TODO [JPA]: add the fields of a line item and their getters/setters:
-    //   - Long productId       (which product, from product-service)
-    //   - String productName   (copied from the Feign reply)
-    //   - double price         (copied from the Feign reply)
-    //   - int quantity
+    // which product, from product-service (only the id - no JPA link, product
+    // lives in a different service/database)
+    private Long productId;
+
+    private String productName; // copied from the Feign reply
+    private double price;       // copied from the Feign reply
+    private int quantity;
 
     public Long getId() {
         return id;
@@ -34,5 +36,37 @@ public class OrderItem {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getProductId() {
+        return productId;
+    }
+
+    public void setProductId(Long productId) {
+        this.productId = productId;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
     }
 }

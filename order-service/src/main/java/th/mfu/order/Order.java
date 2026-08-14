@@ -1,11 +1,15 @@
 package th.mfu.order;
 
+import java.util.List;
+
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
-// TODO [JPA]: you will also need @OneToMany, @JoinColumn / cascade, and List
 
 /**
  * Order = one customer's order, made up of one or more OrderItems.
@@ -27,11 +31,29 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+<<<<<<< Updated upstream
     // TODO [JPA]: add the fields of an order and their getters/setters:
     //   - String customerName
     //   - double totalPrice
     //   - @OneToMany(cascade = CascadeType.ALL) List<OrderItem> items
     //     (cascade = ALL so saving the order also saves its items)
+=======
+    private String customerName;
+
+    // WHICH user placed it - stored here on the order, not on User.
+    // Fetch them later with GET /orders/user/{userId}.
+    private Long userId;
+
+    private double totalPrice;
+
+    // One Order has many OrderItems. cascade = ALL means: save/update/delete
+    // the Order and Hibernate automatically does the same to its items - you
+    // never have to save each OrderItem yourself.
+    // @JoinColumn puts the foreign key (order_id) on the order_item table.
+    @OneToMany(cascade = CascadeType.ALL)
+    @JoinColumn(name = "order_id")
+    private List<OrderItem> items;
+>>>>>>> Stashed changes
 
     public Long getId() {
         return id;
@@ -39,5 +61,37 @@ public class Order {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getCustomerName() {
+        return customerName;
+    }
+
+    public void setCustomerName(String customerName) {
+        this.customerName = customerName;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public double getTotalPrice() {
+        return totalPrice;
+    }
+
+    public void setTotalPrice(double totalPrice) {
+        this.totalPrice = totalPrice;
+    }
+
+    public List<OrderItem> getItems() {
+        return items;
+    }
+
+    public void setItems(List<OrderItem> items) {
+        this.items = items;
     }
 }
