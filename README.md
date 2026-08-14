@@ -235,6 +235,48 @@ Base URL: `http://localhost:8100/products`
 
 ---
 
+### 7. วิธีทดสอบการทำงานของแต่ละ Role ใน user-service (ADMIN vs USER)
+
+#### 👑 1. ทดสอบเข้าสู่ระบบบัญชี ADMIN (`admin` / `admin123`)
+* **HTTP Method**: `POST`
+* **URL**: `http://localhost:8400/users/login`
+* **Body** (JSON):
+  ```json
+  {
+    "username": "admin",
+    "password": "admin123"
+  }
+  ```
+* **ผลลัพธ์**: ได้รับ Role `"ADMIN"` สำหรับผู้ดูแลระบบ สามารถเข้าดูหน้าจอ Live Notification Dashboard ได้ที่ `http://localhost:8300`
+
+#### 👤 2. ทดสอบเข้าสู่ระบบบัญชี USER ปกติ (`user` / `user123`)
+* **HTTP Method**: `POST`
+* **URL**: `http://localhost:8400/users/login`
+* **Body** (JSON):
+  ```json
+  {
+    "username": "user",
+    "password": "user123"
+  }
+  ```
+* **ผลลัพธ์**: ได้รับ Role `"USER"` สำหรับลูกค้าสั่งซื้อสินค้า
+
+#### 🛡️ 3. ทดสอบความปลอดภัยการสมัครสมาชิก (Register)
+* **HTTP Method**: `POST`
+* **URL**: `http://localhost:8400/users/register`
+* **Body** (JSON):
+  ```json
+  {
+    "username": "john_doe",
+    "password": "password123",
+    "displayName": "John Doe",
+    "role": "ADMIN"
+  }
+  ```
+* **ผลลัพธ์**: ระบบจะทำการบังคับเปลี่ยน Role เป็น `"USER"` อัตโนมัติ (ป้องกันไม่ให้ผู้ใช้ทั่วไปแอบใส่ `role=ADMIN` ใน Body เพื่อยกระดับสิทธิ์ตัวเอง)
+
+---
+
 ## How to run
 
 ### Option 1 — Docker (everything at once)

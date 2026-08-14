@@ -206,6 +206,9 @@ services:
       - SERVER_PORT=8300
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-naming-server:8761/eureka/
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/coffee_shop?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
     ports:
       - "8300:8300"
     networks:
@@ -214,6 +217,8 @@ services:
       eureka-naming-server:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      mysql:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8300/actuator/health || exit 1"]
