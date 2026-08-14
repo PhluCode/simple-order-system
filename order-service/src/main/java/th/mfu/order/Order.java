@@ -31,13 +31,6 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-<<<<<<< Updated upstream
-    // TODO [JPA]: add the fields of an order and their getters/setters:
-    //   - String customerName
-    //   - double totalPrice
-    //   - @OneToMany(cascade = CascadeType.ALL) List<OrderItem> items
-    //     (cascade = ALL so saving the order also saves its items)
-=======
     private String customerName;
 
     // WHICH user placed it - stored here on the order, not on User.
@@ -53,7 +46,6 @@ public class Order {
     @OneToMany(cascade = CascadeType.ALL)
     @JoinColumn(name = "order_id")
     private List<OrderItem> items;
->>>>>>> Stashed changes
 
     public Long getId() {
         return id;

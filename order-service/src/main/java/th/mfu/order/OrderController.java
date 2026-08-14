@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -57,8 +58,6 @@ public class OrderController {
         return new ResponseEntity<>(orderRepository.findAll(), HttpStatus.OK);
     }
 
-<<<<<<< Updated upstream
-=======
     // ---- GET (one user's orders) -----------------------------------------
     // This is "the orders of each person". They live HERE, on order-service,
     // keyed by userId - NOT inside user-service.
@@ -67,32 +66,11 @@ public class OrderController {
         return new ResponseEntity<>(orderRepository.findByUserId(userId), HttpStatus.OK);
     }
 
->>>>>>> Stashed changes
     // ---- POST (place an order) : the main task ---------------------------
     // Example request body (design your own shape - this is only a suggestion):
     //   { "customerName": "Alice", "productId": 1, "quantity": 2 }
     @PostMapping
     public ResponseEntity<String> placeOrder(@RequestBody OrderRequest request) {
-<<<<<<< Updated upstream
-        // TODO [Feign]  (step 1) ask product-service for the product:
-        //     ProductDTO product = productClient.getProduct(request.getProductId());
-        //     LOGGER.info("product came from copy on port {}", product.getServedByPort());
-        //     ^ log this - it is your load-balancer proof in the demo.
-        //
-        // TODO [JPA]    (step 2) build the Order + one OrderItem from the reply
-        //     (copy product.getName() and product.getPrice() into the item),
-        //     compute the total, then orderRepository.save(order).
-        //
-        // TODO [Kafka]  (step 3) publish an event so notification-service reacts.
-        //     Build a small JSON string, e.g.
-        //       {"orderId":..,"customerName":"..","productName":"..","quantity":..}
-        //     then:  kafkaTemplate.send(topicName, json);
-        //     Note what send() does NOT do: it does not wait for anyone to read
-        //     it, and it does not know who will. That is pub/sub.
-        //
-        // Then return 201 CREATED.
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
-=======
         // ---- step 1 [Feign]: ask product-service for the product -----------
         // Calling this method makes a real HTTP GET under the hood, resolved
         // through Eureka by the name "product-service" and load-balanced
@@ -143,6 +121,5 @@ public class OrderController {
         LOGGER.info("published to topic {}: {}", topicName, json);
 
         return new ResponseEntity<>("Order #" + saved.getId() + " placed", HttpStatus.CREATED);
->>>>>>> Stashed changes
     }
 }
