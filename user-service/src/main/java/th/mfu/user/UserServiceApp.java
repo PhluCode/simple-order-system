@@ -32,21 +32,25 @@ public class UserServiceApp {
     @Bean
     CommandLineRunner seedUsers(UserRepository repository) {
         return args -> {
-            User admin = new User();
-            admin.setUsername("admin");
-            admin.setPassword("admin123");
-            admin.setRole(User.ROLE_ADMIN);
-            admin.setDisplayName("Admin");
-            repository.save(admin);
+            if (repository.findByUsername("admin") == null) {
+                User admin = new User();
+                admin.setUsername("admin");
+                admin.setPassword("admin123");
+                admin.setRole(User.ROLE_ADMIN);
+                admin.setDisplayName("Admin");
+                repository.save(admin);
+            }
 
-            User user = new User();
-            user.setUsername("user");
-            user.setPassword("user123");
-            user.setRole(User.ROLE_USER);
-            user.setDisplayName("Normal User");
-            repository.save(user);
+            if (repository.findByUsername("user") == null) {
+                User user = new User();
+                user.setUsername("user");
+                user.setPassword("user123");
+                user.setRole(User.ROLE_USER);
+                user.setDisplayName("Normal User");
+                repository.save(user);
+            }
 
-            System.out.println("Seeded users: admin/admin123 (ADMIN), user/user123 (USER)");
+            System.out.println("Seeded users in MySQL coffee_shop: admin/admin123 (ADMIN), user/user123 (USER)");
         };
     }
 }

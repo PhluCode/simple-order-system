@@ -151,6 +151,7 @@ docker compose up -d --build
 | 📍 **Product Service (Copy 1)** | [http://localhost:8100/products](http://localhost:8100/products) | REST API จัดการสินค้า (Port 8100) |
 | 📍 **Product Service (Copy 2)** | [http://localhost:8101/products](http://localhost:8101/products) | REST API จัดการสินค้า (Port 8101 - Load Balancer) |
 | 📍 **Order Service** | [http://localhost:8200/orders](http://localhost:8200/orders) | REST API สั่งซื้อสินค้า |
+| 📍 **User Service** | [http://localhost:8400/users](http://localhost:8400/users) | REST API จัดการบัญชีผู้ใช้และ Login (Port 8400) |
 | 📍 **Notification Live Dashboard** | [http://localhost:8300](http://localhost:8300) | หน้าจอ Live Dashboard แสดง Order จาก Kafka |
 
 ---
