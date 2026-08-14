@@ -1,5 +1,7 @@
 package th.mfu.order;
 
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
@@ -7,7 +9,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
  */
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
-    // TODO [JPA]: "orders of one user" is just a derived query. Add:
-    //   List<Order> findByUserId(Long userId);
-    // Used by GET /orders/user/{userId} in OrderController.
+    // Spring Data reads the method name and builds the SQL for you:
+    // "findByUserId" -> SELECT * FROM orders WHERE user_id = ?
+    // No implementation needed - Spring generates it at startup.
+    List<Order> findByUserId(Long userId);
 }

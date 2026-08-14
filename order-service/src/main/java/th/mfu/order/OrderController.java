@@ -1,5 +1,7 @@
 package th.mfu.order;
 
+import java.util.Collections;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +15,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * The heart of the project. STUDENT B.
@@ -45,6 +50,8 @@ public class OrderController {
     @Value("${app.kafka.topic:orders}")
     private String topicName;
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     // ---- GET (list) : worked example, already done -----------------------
     @GetMapping
     public ResponseEntity<Iterable<Order>> listOrders() {
@@ -56,8 +63,7 @@ public class OrderController {
     // keyed by userId - NOT inside user-service.
     @GetMapping("/user/{userId}")
     public ResponseEntity<Iterable<Order>> ordersOfUser(@PathVariable Long userId) {
-        // TODO [JPA]: return orderRepository.findByUserId(userId) with 200 OK.
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+        return new ResponseEntity<>(orderRepository.findByUserId(userId), HttpStatus.OK);
     }
 
     // ---- POST (place an order) : the main task ---------------------------
@@ -65,25 +71,55 @@ public class OrderController {
     //   { "customerName": "Alice", "productId": 1, "quantity": 2 }
     @PostMapping
     public ResponseEntity<String> placeOrder(@RequestBody OrderRequest request) {
-        // TODO [Feign]  (step 1) ask product-service for the product:
-        //     ProductDTO product = productClient.getProduct(request.getProductId());
-        //     LOGGER.info("product came from copy on port {}", product.getServedByPort());
-        //     ^ log this - it is your load-balancer proof in the demo.
-        //
-        // TODO [JPA]    (step 2) build the Order + one OrderItem from the reply
-        //     (copy product.getName() and product.getPrice() into the item),
-        //     compute the total, then orderRepository.save(order).
-        //     Also copy request.getUserId() onto the order, so it can be found
-        //     later by GET /orders/user/{userId}.
-        //
-        // TODO [Kafka]  (step 3) publish an event so notification-service reacts.
-        //     Build a small JSON string, e.g.
-        //       {"orderId":..,"customerName":"..","productName":"..","quantity":..}
-        //     then:  kafkaTemplate.send(topicName, json);
-        //     Note what send() does NOT do: it does not wait for anyone to read
-        //     it, and it does not know who will. That is pub/sub.
-        //
-        // Then return 201 CREATED.
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+        // ---- step 1 [Feign]: ask product-service for the product -----------
+        // Calling this method makes a real HTTP GET under the hood, resolved
+        // through Eureka by the name "product-service" and load-balanced
+        // between the two running copies.
+        ProductDTO product = productClient.getProduct(request.getProductId());
+        LOGGER.info("product came from copy on port {}", product.getServedByPort());
+
+        // ---- step 2 [JPA]: build and save the Order + OrderItem ------------
+        OrderItem item = new OrderItem();
+        item.setProductId(product.getId());
+        item.setProductName(product.getName());
+        item.setPrice(product.getPrice());
+        item.setQuantity(request.getQuantity());
+
+        double totalPrice = product.getPrice() * request.getQuantity();
+
+        Order order = new Order();
+        order.setCustomerName(request.getCustomerName());
+        order.setUserId(request.getUserId());
+        order.setTotalPrice(totalPrice);
+        order.setItems(Collections.singletonList(item));
+
+        // cascade = ALL on Order.items means this one save() also saves the
+        // OrderItem - we never call orderItemRepository (there isn't one).
+        Order saved = orderRepository.save(order);
+
+        // ---- step 3 [Kafka]: publish an event -------------------------------
+        // notification-service only reads "customerName" and "productName"
+        // (see OrderPlacedListener), the rest is extra context in the log.
+        ObjectNode event = objectMapper.createObjectNode();
+        event.put("orderId", saved.getId());
+        event.put("customerName", saved.getCustomerName());
+        event.put("productName", product.getName());
+        event.put("quantity", request.getQuantity());
+
+        String json;
+        try {
+            json = objectMapper.writeValueAsString(event);
+        } catch (Exception e) {
+            LOGGER.error("failed to build Kafka event JSON", e);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        // send() is fire-and-forget: it does not wait for anyone to read the
+        // event, and it does not know who (if anyone) will. That is pub/sub -
+        // order-service and notification-service never call each other directly.
+        kafkaTemplate.send(topicName, json);
+        LOGGER.info("published to topic {}: {}", topicName, json);
+
+        return new ResponseEntity<>("Order #" + saved.getId() + " placed", HttpStatus.CREATED);
     }
 }
