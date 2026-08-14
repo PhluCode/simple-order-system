@@ -61,6 +61,7 @@ to complete. Every graded feature has an owner.
 | 3 | `Order` | order-service | one Order has many OrderItems (`@OneToMany`) |
 | 4 | `OrderItem` | order-service | many OrderItems belong to one Order (`@ManyToOne`) |
 | 5 | `Notification` | notification-service | filled from `orders` Kafka events |
+| 6 | `User` *(bonus)* | user-service | account with a `role`: ADMIN or USER |
 
 ```
 Category 1 ───< Product          OrderItem >─── 1 Order
@@ -79,8 +80,200 @@ Order (orders topic) ──▶ Kafka ──▶ Notification (notification-servic
 | **B** | order-service | `Order`, `OrderItem`, `OrderController` (Feign call + Kafka publish) | **Feign + Eureka (5)**, Kafka producer, JPA (4) |
 | **C** | notification-service | `Notification`, the `@KafkaListener` in `OrderPlacedListener` | **Kafka pub/sub (5)**, JPA (2) |
 
-> Every `TODO` in the code is tagged `[REST]`, `[JPA]`, `[Feign]` or `[Kafka]`
-> so you can see which points it earns.
+> Every `TODO` in the code is tagged `[REST]`, `[JPA]`, `[Feign]`, `[Kafka]`
+> or `[Auth]` so you can see which points it earns.
+
+### Optional: user-service (accounts + roles)
+
+Not required by the rubric — the required 5 entities are already covered — but
+it makes the system realistic. It adds a **6th entity** (`User`) with a `role`
+of `ADMIN` or `USER`, and a **simple** log-in (`POST /users/login` checks the
+username + password against the database and returns the role; no Spring
+Security, no JWT). The idea:
+
+- **USER** places orders (order-service).
+- **ADMIN** watches the notifications dashboard (:8300).
+
+Enforcing "only admin sees notifications" is left as a later step (a note, not
+code, so notification-service stays untouched for now). Since there are 3 of you
+and now 4 services, let one member own two, or treat user-service as a shared
+bonus. Port **8400**.
+
+> ⚠️ The demo stores passwords as plain text for simplicity. Say so in the
+> Q&A — a real app must hash them (e.g. BCrypt) and never return them in a
+> response.
+
+---
+
+## 🚀 Quick Start Guide (สำหรับเพื่อนร่วมทีมที่ Clone โปรเจกต์ไปรัน)
+
+### 1. คำสั่งรันระบบทั้งหมด (Docker Compose)
+
+เปิด Terminal ในโฟลเดอร์ root ของโปรเจกต์ (`simple-order-system`) แล้วรันคำสั่ง:
+
+```bash
+# สั่ง Build และรันทุก Microservice + MySQL + Kafka + Eureka ใน Background
+docker compose up -d --build
+```
+
+*(การรันครั้งแรก Docker จะทำการ Download Image และ Compile Maven ใน Container ใช้เวลาประมาณ 1–2 นาที)*
+
+---
+
+### 2. การเชื่อมต่อฐานข้อมูล MySQL ผ่าน DBeaver
+
+ฐานข้อมูลที่ใช้คือ **MySQL 8.0** ธีมร้านกาแฟชื่อ **`coffee_shop`**:
+
+- **Driver Type**: `MySQL`
+- **Host / Server**: `localhost`
+- **Port**: `3307` *(ตั้งค่าหลบ Port 3306 ในเครื่อง)*
+- **Database**: `coffee_shop`
+- **Username**: `root`
+- **Password**: `root`
+
+**⚠️ ตั้งค่าเพิ่มเติมใน DBeaver (แท็บ Driver Properties)**:
+- `allowPublicKeyRetrieval` = `true`
+- `useSSL` = `false`
+
+---
+
+### 3. ข้อมูลเริ่มต้นร้านกาแฟ (Data Seeding)
+
+ระบบตั้งค่าให้ Spring Boot อ่านไฟล์ **`product-service/src/main/resources/seed.sql`** เพื่อนำเข้าข้อมูลหมวดหมู่สินค้า (`Hot Coffee`, `Iced Coffee`, `Tea & Non-Coffee`, `Bakery & Pastries`) และเมนูกาแฟตัวอย่าง 12 รายการเข้าฐานข้อมูล `coffee_shop` ใน MySQL โดยอัตโนมัติทันทีที่ Container เริ่มทำงาน
+
+---
+
+### 4. พอร์ตและ URLs สำหรับทดสอบระบบ
+
+| Service / Dashboard | URL | รายละเอียด |
+| :--- | :--- | :--- |
+| 📍 **Eureka Dashboard** | [http://localhost:8761](http://localhost:8761) | หน้ารวม Microservices ที่ลงทะเบียนไว้ |
+| 📍 **Product Service (Copy 1)** | [http://localhost:8100/products](http://localhost:8100/products) | REST API จัดการสินค้า (Port 8100) |
+| 📍 **Product Service (Copy 2)** | [http://localhost:8101/products](http://localhost:8101/products) | REST API จัดการสินค้า (Port 8101 - Load Balancer) |
+| 📍 **Order Service** | [http://localhost:8200/orders](http://localhost:8200/orders) | REST API สั่งซื้อสินค้า |
+| 📍 **User Service** | [http://localhost:8400/users](http://localhost:8400/users) | REST API จัดการบัญชีผู้ใช้และ Login (Port 8400) |
+| 📍 **Notification Live Dashboard** | [http://localhost:8300](http://localhost:8300) | หน้าจอ Live Dashboard แสดง Order จาก Kafka |
+
+---
+
+### 5. คำสั่งจัดการ Docker Useful Commands
+
+```bash
+# ตรวจสอบสถานะ Containers ทั้งหมด
+docker compose ps
+
+# ดู Log การทำงานของระบบ
+docker compose logs -f
+
+# ดู Log เฉพาะ product-service
+docker compose logs -f product-service-1
+
+# ปิดระบบ Container ทั้งหมด
+docker compose down
+```
+
+---
+
+### 6. วิธีทดสอบ REST API ของ product-service ด้วย Postman
+
+Base URL: `http://localhost:8100/products`
+
+#### 🟢 1. GET — ดึงรายการสินค้าทั้งหมด (และค้นหา)
+* **HTTP Method**: `GET`
+* **URL**: `http://localhost:8100/products`
+* **ตัวเลือกค้นหา (Query Params)**:
+  * ค้นหาตามชื่อ: `http://localhost:8100/products?name=latte`
+  * กรองตามหมวดหมู่: `http://localhost:8100/products?categoryId=1`
+
+#### 🟢 2. GET — ดึงข้อมูลสินค้าชิ้นเดียวตาม ID
+* **HTTP Method**: `GET`
+* **URL**: `http://localhost:8100/products/1`
+
+#### 🟡 3. POST — เพิ่มสินค้าใหม่
+* **HTTP Method**: `POST`
+* **URL**: `http://localhost:8100/products`
+* **Headers**: `Content-Type: application/json`
+* **Body** (เลือก `raw` ➔ `JSON`):
+  ```json
+  {
+    "name": "Iced Honey Lemon Espresso",
+    "price": 80.0,
+    "stock": 30,
+    "categoryId": 2
+  }
+  ```
+
+#### 🔵 4. PUT — แก้ไขข้อมูลสินค้าทั้งหมด (Replace)
+* **HTTP Method**: `PUT`
+* **URL**: `http://localhost:8100/products/1`
+* **Headers**: `Content-Type: application/json`
+* **Body** (เลือก `raw` ➔ `JSON`):
+  ```json
+  {
+    "name": "Single Origin Espresso",
+    "price": 50.0,
+    "stock": 45,
+    "categoryId": 1
+  }
+  ```
+
+#### 🟠 5. PATCH — อัปเดตเฉพาะบางฟิลด์ (Partial Update)
+* **HTTP Method**: `PATCH`
+* **URL**: `http://localhost:8100/products/1`
+* **Headers**: `Content-Type: application/json`
+* **Body** (เลือก `raw` ➔ `JSON`):
+  ```json
+  {
+    "price": 40.0,
+    "stock": 60
+  }
+  ```
+
+#### 🔴 6. DELETE — ลบสินค้าตาม ID
+* **HTTP Method**: `DELETE`
+* **URL**: `http://localhost:8100/products/1`
+
+---
+
+### 7. วิธีทดสอบการทำงานของแต่ละ Role ใน user-service (ADMIN vs USER)
+
+#### 👑 1. ทดสอบเข้าสู่ระบบบัญชี ADMIN (`admin` / `admin123`)
+* **HTTP Method**: `POST`
+* **URL**: `http://localhost:8400/users/login`
+* **Body** (JSON):
+  ```json
+  {
+    "username": "admin",
+    "password": "admin123"
+  }
+  ```
+* **ผลลัพธ์**: ได้รับ Role `"ADMIN"` สำหรับผู้ดูแลระบบ สามารถเข้าดูหน้าจอ Live Notification Dashboard ได้ที่ `http://localhost:8300`
+
+#### 👤 2. ทดสอบเข้าสู่ระบบบัญชี USER ปกติ (`user` / `user123`)
+* **HTTP Method**: `POST`
+* **URL**: `http://localhost:8400/users/login`
+* **Body** (JSON):
+  ```json
+  {
+    "username": "user",
+    "password": "user123"
+  }
+  ```
+* **ผลลัพธ์**: ได้รับ Role `"USER"` สำหรับลูกค้าสั่งซื้อสินค้า
+
+#### 🛡️ 3. ทดสอบความปลอดภัยการสมัครสมาชิก (Register)
+* **HTTP Method**: `POST`
+* **URL**: `http://localhost:8400/users/register`
+* **Body** (JSON):
+  ```json
+  {
+    "username": "john_doe",
+    "password": "password123",
+    "displayName": "John Doe",
+    "role": "ADMIN"
+  }
+  ```
+* **ผลลัพธ์**: ระบบจะทำการบังคับเปลี่ยน Role เป็น `"USER"` อัตโนมัติ (ป้องกันไม่ให้ผู้ใช้ทั่วไปแอบใส่ `role=ADMIN` ใน Body เพื่อยกระดับสิทธิ์ตัวเอง)
 
 ---
 
@@ -89,7 +282,7 @@ Order (orders topic) ──▶ Kafka ──▶ Notification (notification-servic
 ### Option 1 — Docker (everything at once)
 
 ```bash
-docker compose up --build
+docker compose up --build -d
 ```
 
 First boot is slow (Maven builds four jars inside Docker). Then open:

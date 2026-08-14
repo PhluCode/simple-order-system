@@ -10,9 +10,18 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>notification-service</artifactId>
+    <artifactId>user-service</artifactId>
     <packaging>jar</packaging>
 
+    <!--
+        Owns accounts and log-in. Stores a User (with a ROLE: ADMIN or USER),
+        exposes REST for accounts, and a simple POST /login that checks the
+        username + password against the database and returns the user's role.
+        NO Spring Security, NO JWT - a plain lookup is enough for the demo; you
+        can harden it later.
+        Given: pom, app class, properties, Dockerfile. Your job: the User
+        entity, the repository finder, and UserController (create + login).
+    -->
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -29,11 +38,6 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
-        </dependency>
-        <!-- Kafka: @KafkaListener lives here -->
-        <dependency>
-            <groupId>org.springframework.kafka</groupId>
-            <artifactId>spring-kafka</artifactId>
         </dependency>
         <dependency>
             <groupId>com.h2database</groupId>

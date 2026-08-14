@@ -17,6 +17,7 @@ version: '3.8'
 #   8101  product-service copy 2  (this is how you SEE the load balancer)
 #   8200  order-service
 #   8300  notification-service    http://localhost:8300  (live page)
+#   8400  user-service            (accounts + simple login)
 # ---------------------------------------------------------------------------
 
 services:
@@ -69,6 +70,24 @@ services:
       retries: 10
       start_period: 20s
 
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=coffee_shop
+    ports:
+      - "3307:3306"
+    networks:
+      - order-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
   # ---- product-service: TWO copies, so the load balancer has a choice ----
   product-service-1:
     build:
@@ -79,12 +98,17 @@ services:
       - SERVER_PORT=8100
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-naming-server:8761/eureka/
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/coffee_shop?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
     ports:
       - "8100:8100"
     networks:
       - order-net
     depends_on:
       eureka-naming-server:
+        condition: service_healthy
+      mysql:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8100/actuator/health || exit 1"]
@@ -102,12 +126,17 @@ services:
       - SERVER_PORT=8101
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-naming-server:8761/eureka/
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/coffee_shop?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
     ports:
       - "8101:8101"
     networks:
       - order-net
     depends_on:
       eureka-naming-server:
+        condition: service_healthy
+      mysql:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8101/actuator/health || exit 1"]
@@ -141,6 +170,33 @@ services:
       retries: 10
       start_period: 30s
 
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    container_name: user-service
+    environment:
+      - SERVER_PORT=8400
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-naming-server:8761/eureka/
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/coffee_shop?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+    ports:
+      - "8400:8400"
+    networks:
+      - order-net
+    depends_on:
+      eureka-naming-server:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8400/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+
   notification-service:
     build:
       context: .
@@ -150,6 +206,9 @@ services:
       - SERVER_PORT=8300
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-naming-server:8761/eureka/
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/coffee_shop?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
     ports:
       - "8300:8300"
     networks:
@@ -158,6 +217,8 @@ services:
       eureka-naming-server:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      mysql:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8300/actuator/health || exit 1"]
