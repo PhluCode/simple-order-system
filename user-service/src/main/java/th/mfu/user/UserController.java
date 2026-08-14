@@ -41,6 +41,8 @@ public class UserController {
 
     @PostMapping("/register")
     public ResponseEntity<String> createUser(@RequestBody User user) {
+        // Self sign-up is always a USER. We OVERWRITE whatever role was sent, so
+        // nobody can make themselves an admin by putting role=ADMIN in the body.
         user.setRole(User.ROLE_USER);
         User saved = userRepository.save(user);
         return new ResponseEntity<>("User created with ID: " + saved.getId(), HttpStatus.CREATED);
